@@ -1,13 +1,13 @@
-# docker/docker-compose.yml
 version: "3.8"
 
 services:
   nginx:
     build:
-      context: ./nginx
+      context: ..
+      dockerfile: docker/nginx/Dockerfile
     ports:
-      - "8443:8443"   # HTTPS local mapeado para host 8443
-      - "8080:8080"   # optional redirect server
+      - "8443:8443"
+      - "8080:8080"
     volumes:
       - ../certs/server:/etc/nginx/certs/server:ro
       - ../nginx_site/html:/usr/share/nginx/html:ro
