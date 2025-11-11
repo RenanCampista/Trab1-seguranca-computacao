@@ -1,3 +1,35 @@
+# docker files
+docker/.env
+docker/nginx/logs/
+docker/nginx/access.log
+docker/nginx/error.log
+docker/volumes/
+docker/data/
+*.pid
+
+# Arquivos sensíveis
+*.pem
+*.crt
+*.csr
+*.key
+*.der
+*.p12
+*.jks
+certs/root/
+certs/intermediate/
+certs/server/
+
+# Virtual environments
+venv/
+.env/
+env/
+.venv/
+
+# Arquivos de teste ou saídas de script
+test_output/
+output/
+results/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
