@@ -11,7 +11,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509 import DNSName, IPAddress
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import ipaddress
 import os
 
@@ -60,8 +60,8 @@ cert_builder = (
     .issuer_name(inter_cert.subject)
     .public_key(csr.public_key())
     .serial_number(x509.random_serial_number())
-    .not_valid_before(datetime.utcnow() - timedelta(days=1))
-    .not_valid_after(datetime.utcnow() + timedelta(days=825))  # ~2 anos, ajustar se quiser
+    .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
+    .not_valid_after(datetime.now(timezone.utc) + timedelta(days=825))  # ~2 anos (ajustar conforme necessário)
     .add_extension(
         x509.SubjectAlternativeName([
             DNSName(u"localhost"),
@@ -102,7 +102,7 @@ with open(csr_path, 'wb') as f:
 with open(cert_path, 'wb') as f:
     f.write(srv_cert.public_bytes(serialization.Encoding.PEM))
 
-# Criar fullchain.pem = server cert + intermediate cert (neste ordem)
+# Criar fullchain.pem = server cert + intermediate cert
 with open(fullchain_path, 'wb') as f:
     f.write(srv_cert.public_bytes(serialization.Encoding.PEM))
     with open(INTER_CERT, 'rb') as ic:

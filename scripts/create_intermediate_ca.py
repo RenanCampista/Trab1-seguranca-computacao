@@ -9,7 +9,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 ROOT_KEY = os.path.join(os.path.dirname(__file__), '..', 'certs', 'root', 'root.key.pem')
@@ -35,15 +35,15 @@ inter_subject = x509.Name([
     x509.NameAttribute(NameOID.COMMON_NAME, u"My Test Intermediate CA"),
 ])
 
-# Construir CSR ou certificado diretamente (vamos criar certificado da intermediária e assiná-lo com a root)
+# Criar o certificado da intermediária assinado pela raiz
 builder = (
     x509.CertificateBuilder()
     .subject_name(inter_subject)
     .issuer_name(root_cert.subject)
     .public_key(inter_key.public_key())
     .serial_number(x509.random_serial_number())
-    .not_valid_before(datetime.utcnow() - timedelta(days=1))
-    .not_valid_after(datetime.utcnow() + timedelta(days=3650))  # 10 anos
+    .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
+    .not_valid_after(datetime.now(timezone.utc) + timedelta(days=3650))  # 10 anos de validade
     .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
     .add_extension(x509.KeyUsage(digital_signature=False,
                                  key_encipherment=False,
