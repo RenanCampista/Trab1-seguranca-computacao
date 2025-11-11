@@ -9,6 +9,7 @@
 - **Integrantes:**  
   - Nome: Artur Mendes  
   - Nome: Renan Campista  
+  - Nome: Ricardo Modenese
 
 ---
 
@@ -23,7 +24,7 @@ Descreva e desenhe (use figuras) a arquitetura geral dos dois cenários implemen
 ## 2. Tarefa 1 – HTTPS com Certificado Público (Let's Encrypt + ngrok)
 
 ### 2.1. Preparação do Ambiente
-- Sistema operacional: ____________________  
+- Sistema operacional: ____________________ 
 - Ferramentas utilizadas: ____________________  
 - Versão do Docker / Nginx: ____________________  
 - Descreva e disponibilize a configuração do servidor web e a página de exemplo criada:
