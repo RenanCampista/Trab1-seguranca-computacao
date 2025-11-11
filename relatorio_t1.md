@@ -51,25 +51,55 @@ Descreva e desenhe (use figuras) a arquitetura geral dos dois cenários implemen
 ## 3. Tarefa 2 – HTTPS com PKI Própria (Root + Intermediária)
 
 ### 3.1. Criação da CA Raiz
-- Explique o papel da CA raiz, descreva o processo de criação e a importância na cadeia de confiança.
+A CA raiz (Certificate Authority Root) é o ponto inicial da cadeia de confiança. Ela é responsável por assinar o certificado da CA intermediária, tornando-se a autoridade máxima de confiança dentro de uma PKI (Public Key Infrastructure). Neste trabalho, a CA raiz foi autoassinada, ou seja, o certificado foi emitido e assinado pela própria chave privada da CA raiz. O processo envolveu a geração de um par de chaves RSA de 4096 bits, seguido da criação de um certificado X.509 com validade estendida (por exemplo, 10 anos). Sua principal função é não assinar diretamente certificados de servidores ou usuários, mas apenas CA intermediárias, reduzindo o risco de comprometimento. Caso a chave privada da CA raiz seja comprometida, toda a cadeia se torna inválida, por isso ela deve ser armazenada de forma altamente segura e offline.
 
 ### 3.2. Criação da CA Intermediária
-- Explique por que se utiliza uma CA intermediária, descrevendo o processo de criação e seus benefícios em relação à segurança.
+A CA intermediária atua como uma ponte entre a CA raiz e os certificados de servidores.
+Ela é usada para emitir certificados de servidor ou cliente, preservando a segurança da raiz, que permanece isolada.
+O processo consistiu em gerar um novo par de chaves RSA (4096 bits), criar um CSR (Certificate Signing Request) e então assinar esse CSR com a chave privada da CA raiz, produzindo o certificado da CA intermediária.
+O uso de uma CA intermediária traz benefícios importantes:
+
+- Aumenta a segurança operacional, pois a CA raiz permanece inativa e protegida.
+- Permite revogação e substituição mais simples da intermediária, sem afetar toda a cadeia.
+- Facilita a delegação de emissão de certificados em ambientes corporativos.
 
 ### 3.3. Emissão do Certificado do Servidor
-- Caminho do `fullchain.crt`: ____________________________  
-- Descreva o processo de emissão do certificado do servidor e como ele foi assinado pela CA intermediária.
+- Caminho do `fullchain.crt`: certs/server/fullchain.crt 
+
+O processo de emissão do certificado do servidor envolveu:
+1. Geração do par de chaves do servidor (server.key);
+2. Criação de um CSR (Certificate Signing Request) com o campo Common Name (CN) definido como localhost;
+3. Assinatura do CSR pela CA intermediária, resultando em server.crt;
+4. Criação do arquivo fullchain.crt, que contém o certificado do servidor concatenado com o da CA intermediária — formando a cadeia completa utilizada pelo Nginx.
+
+O Nginx foi configurado para usar:
+```nginx
+ssl_certificate     /etc/ssl/certs/fullchain.crt;
+ssl_certificate_key /etc/ssl/private/server.key;
+```
+Assim, o servidor passou a responder via HTTPS com um certificado válido dentro da PKI privada.
 
 ### 3.4. Importação da CA Raiz no Navegador
 Descreva o procedimento adotado para importar o certificado raiz no navegador:  
-- Caminho seguido no navegador: __________________________  
+- Caminho seguido no navegador (Firefox): Configurações → Privacidade e Segurança → Certificados → Ver Certificados → Autoridades → Importar
+
 - Resultado esperado: navegador passou a confiar na CA criada? Justifique
+Sim. Após a importação, o navegador passou a reconhecer a CA raiz como uma autoridade confiável, permitindo que o site https://localhost:8443 fosse exibido como conexão segura (cadeado verde). Isso ocorre porque o navegador agora reconhece a assinatura da CA intermediária (e, por consequência, do certificado do servidor) como parte de uma cadeia confiável que se origina na CA raiz instalada.
+
 - Inclua uma captura de tela do certificado confiável.
 
-### 3.5. Validação da Cadeia
-- Resultado do comando de verificação: ____________________________  
-- Screenshot do navegador com HTTPS ativo e confiável: *(inserir imagem)*
+![Certificado confiável](imgs/screenshot_certificado.png)
 
+### 3.5. Validação da Cadeia
+- Resultado do comando de verificação: 
+```bash
+curl -v --cacert certs/root/root.cert.pem https://localhost:8443/
+```
+- Output esperado: Página HTML retornada com sucesso, indicando que a cadeia de certificação foi validada corretamente pelo curl ao utilizar o certificado da CA raiz.
+
+- Screenshot do navegador com HTTPS ativo e confiável:
+
+![HTTPS ativo e confiável](imgs/screenshot_site.png)
 ---
 
 ## 4. Comparação entre os Dois Cenários
