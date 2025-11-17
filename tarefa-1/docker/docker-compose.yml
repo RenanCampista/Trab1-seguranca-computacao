@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  nginx:
+    build:
+      context: .. # contexto = pasta tarefa-1
+      dockerfile: docker/nginx/Dockerfile
+    container_name: nginx_tarefa1
+    ports:
+      - "8001:80" # Porta interna usada pelo cloudflared
+      - "4443:443" # HTTPS local para testes
+    volumes:
+      - ../nginx_site/html:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
