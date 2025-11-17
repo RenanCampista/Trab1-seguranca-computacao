@@ -24,27 +24,92 @@ Descreva e desenhe (use figuras) a arquitetura geral dos dois cenários implemen
 ## 2. Tarefa 1 – HTTPS com Certificado Público (Let's Encrypt + ngrok)
 
 ### 2.1. Preparação do Ambiente
-- Sistema operacional: ____________________ 
-- Ferramentas utilizadas: ____________________  
-- Versão do Docker / Nginx: ____________________  
-- Descreva e disponibilize a configuração do servidor web e a página de exemplo criada:
+- Sistema operacional: Ubuntu 22.04 (WSL2)
+- Ferramentas utilizadas: Docker, Docker Compose, OpenSSL e Cloudflare Tunnel (substituindo o ngrok)
+- Versão do Docker / Nginx: Docker 27.x, Nginx oficial
+O ambiente foi configurado com um container Nginx servindo uma página HTML simples. A estrutura usada foi:
+tarefa-1/
+ ├── docker/
+ │    └── nginx/
+ │         ├── Dockerfile
+ │         └── nginx.conf
+ |    |__ docker-compose.yml
+ └── nginx_site/
+      └── html/
+           └── index.html
+
 
 ### 2.2. Exposição com ngrok
-- Domínio público gerado: ______________________________  
-- Explique como o túnel foi utilizado para permitir a validação do domínio pelo Let's Encrypt.
+Domínio público gerado: https://sox-ceo-fortune-retained.trycloudflare.com/ 
+Foi usado o Cloudflare Tunnel ao invés do ngrok, pois na versão gratuita do ngrok estava solicitando autenticação e cartão e os domínios temporários não são aceitos pelo Let's Encrypt. E, após pesquisas de como resolver esses problemas, encontramos o Cloudflare Tunnel, que é gratuito, estável e aceita verificação externa, além de fornecer certificado válido automaticamente.
 
 ### 2.3. Emissão do Certificado
-- Caminho do certificado gerado: _________________________  
-- Explique o processo de validação e emissão e quais arquivos foram gerados.
+- Caminho do certificado gerado: 
+/tarefa-1/pki/
+│
+├── rootCA/
+│   ├── certs/
+│   ├── private/
+│   └── rootCA.pem
+│
+└── intermediate/
+    ├── certs/
+    ├── csr/
+    ├── private/
+    ├── intermediate.pem
+    ├── intermediate-chain.pem
+    └── ca-chain.pem
+
+Como o ngrok não pôde ser utilizado para validação automática do Let's Encrypt, foi criado uma PKI própria usando OpensSSL, composta por:
+
+1. Root CA (Autoridade Certificadora Raiz)
+Foi criada uma pasta pki/rootCA contendo:
+private/rootCA.key - que é a chave privada da CA raiz;
+rootCA.pem - que é o certificado público da CA raiz
+Diretórios de index, serial e certs para funcionamento como CA real
+
+2. Intermediate CA (Autoridade Certificadora Intermediaria)
+Em seguida, criamos uma CA intermediária, assinada pela Root CA, cuja função é aumentar a segurança, evitar expor a chave da Root CA e simular o funcionamento de CAs reais.
+
+3. Certificado final do Servidor
+Com a CA intermediária pronta, foi criado o certificado real do servidor. Durante a emissão, foi validado o CN corretamente, inserido o domínio gerado pelo Cloudflare Tunnel como SAN e gerado a cadeia completa intermediate-chain.pem para ser usado no Nginx.
 
 ### 2.4. Configuração HTTPS no Nginx
-- Descreva como foi feita a configuração do servidor para uso do certificado emitido.
+Após gerar o certificado do servidor com a CA intermediária, os arquivos resultantes - incluindo a chave privada (server.key), o certificado emitido (server.pem) e a cadeia de confiamça (intermediate-chain.pem) - foram disponibilizados no container Docker através de volumes definidos no docker-compose.yml, ficando acessíveis em /etc/letsencrypt/live/site/.
+
+Com os certificados no local correto, o arquivo nginx.conf foi configurado para habilitar HTTPS na porta 443, apontando explicitamente para cada um desses arquivos. Também foram habilitados apenas protocolos TLS modernos (TLS 1.2 e 1.3), garantindo segurança adequada.
+
+A página estática index.html, armazenada em /usr/share/nginx/html, continuou sendo servida normalmente, mas agora através de uma conexão segura. Após ajustar as configurações, o container foi reconstruído usando docker-compose up --build.
+
+Como o servidor local não pode ser acessado externamente diretamente, utilizou-se o Cloudflare Tunnel para expor o Nginx na internet. Com o túnel iniciado via cloudflared tunnel --url http://localhost:8001, o navegador pôde acessar o site via HTTPS com certificado válido e cadeia de confiança corretamente apresentada.
 
 ### 2.5. Resultados e Validação
-- URL de acesso: ______________________________  
-- Screenshot da página HTTPS: *(inserir imagem)*  
-- Resultado do comando de verificação: ______________________________  
-- Screenshot do certificado no navegador (cadeado): *(inserir imagem)*  
+Com o container em execução, o acesso local foi testado através do endereço http://localhost:8001, confirmando que o servidor estava ativo, respondendo corretamente e servindo a página configurada. Como o ambiente interno utiliza apenas HTTP, essa etapa serviu para garantir que o Nginx estava funcionando sem problemas antes de habilitar o túnel seguro.
+
+O túnel público foi criado com o comando:
+```bash
+cloudflared tunnel --url http://localhost:8001
+```
+
+O qual gera automaticamente um domínio do tipo:
+```text
+INF  https://compile-identity-boots-britain.trycloudflare.com
+```
+
+Esse domínio já é entregue ao usuário com um certificado válido, emitido pela autoridade Google Trust Services, o que significa que o navegador pode estabelecer uma comunicação criptografada imediatamente, sem necessidade de configuração adicional no Nginx. Ao acessar esse domínio pelo navegador, foi exibido o cadeado de conexão segura, confirmando que o certificado era confiável e reconhecido pelo sistema.
+
+- Screenshot da página HTTPS:
+![HTTPS](image.png)
+
+Com o comando de validação feito no terminal:
+```bash
+openssl s_client -connect <domínio>:443 -servername <domínio>
+```
+A saída exibe uma cadeia completa de certificação, incluindo o certificado raiz, o intermediário e o certificado apresentado pelo servidor. A presença da mensagem “Verify return code: 0 (ok)” confirma que toda a cadeia foi validada com sucesso e que a conexão HTTPS está corretamente estabelecida.
+
+- Screenshot do certificado no navegador (cadeado):
+![Cadeado](image-1.png)
+![Certificado Cloudflare](image-2.png)
 
 ---
 
