@@ -20,7 +20,7 @@ TODO
     pip install -r requirements.txt
     ```
 ### Execução do Servidor HTTPS
-1. Navegue até o diretório `tarefa1`:
+1. Navegue até o diretório `tarefa2`:
    ```bash
    cd tarefa2
    ```
