@@ -5,6 +5,8 @@ Este trabalho consolida alguns conceitos estudados na disciplina Segurança em C
 ## Links Úteis
 - [Relatório](relatorio_t1.md)
 
+- [Vídeo da tarefa HTTPS com Certificado Público (Let's Encrypt + ngrok)](https://www.youtube.com/watch?v=lPXP9_PkoKg)
+
 - [Vídeo da tarefa HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando OpenSSL](https://youtu.be)
 
 - [Vídeo da tarefa HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando Python](https://youtu.be/xtD6accmXqE)
