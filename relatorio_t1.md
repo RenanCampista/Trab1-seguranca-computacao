@@ -24,19 +24,13 @@ Descreva e desenhe (use figuras) a arquitetura geral dos dois cenários implemen
 ## 2. Tarefa 1 – HTTPS com Certificado Público (Let's Encrypt + ngrok)
 
 ### 2.1. Preparação do Ambiente
-- Sistema operacional: Ubuntu 22.04 (WSL2)
-- Ferramentas utilizadas: Docker, Docker Compose, OpenSSL e Cloudflare Tunnel (substituindo o ngrok)
-- Versão do Docker / Nginx: Docker 27.x, Nginx oficial
-O ambiente foi configurado com um container Nginx servindo uma página HTML simples. A estrutura usada foi:
-tarefa-1/
- ├── docker/
- │    └── nginx/
- │         ├── Dockerfile
- │         └── nginx.conf
- |    |__ docker-compose.yml
- └── nginx_site/
-      └── html/
-           └── index.html
+- Sistema operacional: Ubuntu 22.04 LTS (via WSL2 no Windows 11).
+- Ferramentas utilizadas: Docker, Docker Compose, OpenSSL e Nginx.
+- Versão do Docker / Docker v28.3.0, Docker Compose v1.26.0
+- Configuração do servidor web e a página de exemplo criada:
+O Nginx foi configurado para servir HTTPS na porta 4443, utilizando o certificado emitido pela CA privada.
+O arquivo default.conf utilizado foi:
+
 
 
 ### 2.2. Exposição com ngrok
