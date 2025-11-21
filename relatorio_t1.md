@@ -24,88 +24,45 @@ Descreva e desenhe (use figuras) a arquitetura geral dos dois cenários implemen
 ## 2. Tarefa 1 – HTTPS com Certificado Público (Let's Encrypt + ngrok)
 
 ### 2.1. Preparação do Ambiente
-- Sistema operacional: Ubuntu 22.04 LTS (via WSL2 no Windows 11).
-- Ferramentas utilizadas: Docker, Docker Compose, OpenSSL e Nginx.
-- Versão do Docker / Docker v28.3.0, Docker Compose v1.26.0
+- Sistema operacional: Ubuntu 22.04 LTS rodando no WSL2 sobre Windows.
+- Ferramentas utilizadas: Docker, Docker Compose, Nginx, Certbot e o cliente de túnel cloudflared do Cloudflare.
+- Versão do Docker / Nginx: Docker Engine e Docker Compose instalados via distribuição oficial para Ubuntu; Nginx conforme versão da imagem oficial (nginx/1.29.x).
 - Configuração do servidor web e a página de exemplo criada:
-O Nginx foi configurado para servir HTTPS na porta 4443, utilizando o certificado emitido pela CA privada.
-O arquivo default.conf utilizado foi:
-
-
+Para preparar o ambiente, foi criado um diretório específico tarefa1-letsencrypt contendo a estrutura de pastas nginx/, certbot/conf/ e certbot/www/. O servidor web foi empacotado em um container Docker utilizando um docker-compose.yml com um serviço nginx_https_public, que expõe as portas 80 e 443 do container nas portas 8081 e 8443 do host. A configuração do Nginx foi feita no arquivo nginx/nginx.conf, montado dentro do container em /etc/nginx/conf.d/default.conf. No bloco HTTP, o servidor atende a porta 80, serve os arquivos estáticos a partir de /usr/share/nginx/html (montado a partir de nginx/html/) e disponibiliza o caminho especial /.well-known/acme-challenge/ apontando para /var/www/certbot, usado pelo Certbot durante a validação. No bloco HTTPS, o Nginx é configurado para escutar na porta 443 com TLS habilitado e, após a emissão do certificado, utilizar os arquivos fullchain.pem e privkey.pem montados a partir de certbot/conf/. Foi criada também uma página de exemplo simples em nginx/html/index.html, com um texto identificando a tarefa de HTTPS com certificado público, usada como conteúdo de teste durante todo o processo.
 
 ### 2.2. Exposição com ngrok
-Domínio público gerado: https://sox-ceo-fortune-retained.trycloudflare.com/ 
-Foi usado o Cloudflare Tunnel ao invés do ngrok, pois na versão gratuita do ngrok estava solicitando autenticação e cartão e os domínios temporários não são aceitos pelo Let's Encrypt. E, após pesquisas de como resolver esses problemas, encontramos o Cloudflare Tunnel, que é gratuito, estável e aceita verificação externa, além de fornecer certificado válido automaticamente.
+- Domínio público gerado: O domínio é gerado usando o comando
+```bash
+cloudflared tunnel --url http://localhost:8081 --protocol http2
+```
+Em vez do ngrok, foi utilizado o serviço de túnel do Cloudflare (cloudflared), que cumpre exatamente o mesmo papel: expor um serviço HTTP/HTTPS local para a Internet por meio de um domínio público temporário. Com o container Nginx já em execução e atendendo em `http://localhost:8081`, foi iniciado o túnel com o comando `cloudflared tunnel --url http://localhost:8081 --protocol http2`. Esse comando cria uma conexão segura entre a máquina local e a infraestrutura do Cloudflare e, como resultado, gera um domínio do tipo `*.trycloudflare.com`. A partir desse momento, qualquer requisição HTTP ou HTTPS feita para esse domínio é redirecionada pelo Cloudflare até o Nginx local na porta 8081. Esse túnel é justamente o que permite que os servidores da Let’s Encrypt consigam acessar o caminho `/.well-known/acme-challenge/...` hospedado localmente e realizar a validação de controle do domínio, de forma equivalente ao que seria feito com ngrok.
 
 ### 2.3. Emissão do Certificado
-- Caminho do certificado gerado: 
-/tarefa-1/pki/
-│
-├── rootCA/
-│   ├── certs/
-│   ├── private/
-│   └── rootCA.pem
-│
-└── intermediate/
-    ├── certs/
-    ├── csr/
-    ├── private/
-    ├── intermediate.pem
-    ├── intermediate-chain.pem
-    └── ca-chain.pem
+- Caminho do certificado gerado: `/etc/letsencrypt/live/DOMINIO-GERADO/`
 
-Como o ngrok não pôde ser utilizado para validação automática do Let's Encrypt, foi criado uma PKI própria usando OpensSSL, composta por:
+Com o túnel ativo e o Nginx servindo corretamente o diretório `/.well-known/acme-challenge/`, foi executado o Certbot em modo webroot utilizando um container dedicado. A partir da raiz do projeto, o comando utilizado foi:
+```bash
+docker-compose run --rm certbot certonly \
+  --webroot -w /var/www/certbot \
+  -d DOMINIO-GERADO
+```
+O parâmetro --webroot indica ao Certbot que ele deve criar os arquivos de desafio dentro de /var/www/certbot/.well-known/acme-challenge/, que está montado no host em certbot/www/ e é servido pelo Nginx no bloco HTTP. A Let’s Encrypt acessa o domínio público gerado pelo túnel (speaking-representing-technological-sounds.trycloudflare.com) e verifica se consegue ler esse arquivo; como o túnel aponta para o Nginx local, a validação é concluída com sucesso. Após essa etapa, o Certbot emite o certificado e grava os arquivos dentro do volume mapeado em /etc/letsencrypt/live/speaking-representing-technological-sounds.trycloudflare.com/ no container, que no host corresponde a certbot/conf/live/speaking-representing-technological-sounds.trycloudflare.com/. São gerados, entre outros, os arquivos fullchain.pem (cadeia completa do certificado, incluindo a CA intermediária da Let’s Encrypt) e privkey.pem (chave privada do servidor). Para simplificar o uso pelo Nginx, esses arquivos foram copiados para nomes genéricos certbot/conf/live/fullchain.pem e certbot/conf/live/privkey.pem, mantendo a cadeia de certificação disponível de forma clara para a configuração do servidor.
 
-1. Root CA (Autoridade Certificadora Raiz)
-Foi criada uma pasta pki/rootCA contendo:
-private/rootCA.key - que é a chave privada da CA raiz;
-rootCA.pem - que é o certificado público da CA raiz
-Diretórios de index, serial e certs para funcionamento como CA real
-
-2. Intermediate CA (Autoridade Certificadora Intermediaria)
-Em seguida, criamos uma CA intermediária, assinada pela Root CA, cuja função é aumentar a segurança, evitar expor a chave da Root CA e simular o funcionamento de CAs reais.
-
-3. Certificado final do Servidor
-Com a CA intermediária pronta, foi criado o certificado real do servidor. Durante a emissão, foi validado o CN corretamente, inserido o domínio gerado pelo Cloudflare Tunnel como SAN e gerado a cadeia completa intermediate-chain.pem para ser usado no Nginx.
 
 ### 2.4. Configuração HTTPS no Nginx
-Após gerar o certificado do servidor com a CA intermediária, os arquivos resultantes - incluindo a chave privada (server.key), o certificado emitido (server.pem) e a cadeia de confiamça (intermediate-chain.pem) - foram disponibilizados no container Docker através de volumes definidos no docker-compose.yml, ficando acessíveis em /etc/letsencrypt/live/site/.
-
-Com os certificados no local correto, o arquivo nginx.conf foi configurado para habilitar HTTPS na porta 443, apontando explicitamente para cada um desses arquivos. Também foram habilitados apenas protocolos TLS modernos (TLS 1.2 e 1.3), garantindo segurança adequada.
-
-A página estática index.html, armazenada em /usr/share/nginx/html, continuou sendo servida normalmente, mas agora através de uma conexão segura. Após ajustar as configurações, o container foi reconstruído usando docker-compose up --build.
-
-Como o servidor local não pode ser acessado externamente diretamente, utilizou-se o Cloudflare Tunnel para expor o Nginx na internet. Com o túnel iniciado via cloudflared tunnel --url http://localhost:8001, o navegador pôde acessar o site via HTTPS com certificado válido e cadeia de confiança corretamente apresentada.
+Após a emissão do certificado, o Nginx foi configurado para utilizar diretamente os arquivos gerados pelo Certbot. No arquivo nginx/nginx.conf, foi criado um bloco de servidor HTTPS que escuta na porta 443 com a diretiva listen 443 ssl; e utiliza as diretivas ssl_certificate e ssl_certificate_key apontando para /etc/letsencrypt/live/fullchain.pem e /etc/letsencrypt/live/privkey.pem, respectivamente, montadas a partir de certbot/conf/live do host. Esse bloco HTTPS utiliza o mesmo root do servidor HTTP (/usr/share/nginx/html) e entrega a página index.html com o conteúdo da tarefa. O bloco HTTP continua ativo na porta 80 para dois propósitos: servir o diretório /.well-known/acme-challenge/ durante renovações futuras de certificado e redirecionar o restante do tráfego para HTTPS, utilizando um redirecionamento permanente return 301 https://$host$request_uri;. Após ajustar o arquivo de configuração, foi feito o rebuild e restart dos containers com docker-compose down seguido de docker-compose up -d --build, garantindo que o Nginx passasse a carregar o certificado público válido na inicialização.
 
 ### 2.5. Resultados e Validação
-Com o container em execução, o acesso local foi testado através do endereço http://localhost:8001, confirmando que o servidor estava ativo, respondendo corretamente e servindo a página configurada. Como o ambiente interno utiliza apenas HTTP, essa etapa serviu para garantir que o Nginx estava funcionando sem problemas antes de habilitar o túnel seguro.
+URL de acesso: https://speaking-representing-technological-sounds.trycloudflare.com
 
-O túnel público foi criado com o comando:
-```bash
-cloudflared tunnel --url http://localhost:8001
-```
+Com o Nginx configurado e o túnel do Cloudflare em execução, a página HTTPS passou a ser acessível publicamente pelo domínio fornecido. No navegador, ao acessar https://speaking-representing-technological-sounds.trycloudflare.com, a página de exemplo é exibida normalmente e o navegador mostra o cadeado de conexão segura. Na visualização de detalhes do certificado, é possível verificar que o certificado foi emitido para o domínio speaking-representing-technological-sounds.trycloudflare.com, com emissor identificado como Let’s Encrypt e período de validade correspondente à data de emissão informada pelo Certbot. Para validar via linha de comando, foi utilizado o comando curl -v https://speaking-representing-technological-sounds.trycloudflare.com/, que mostra o handshake TLS sendo estabelecido com sucesso, o uso de uma suíte de criptografia moderna (por exemplo, TLS 1.3) e o cabeçalho HTTP/1.1 200 OK, confirmando que o certificado é aceito e a página é entregue corretamente.
 
-O qual gera automaticamente um domínio do tipo:
-```text
-INF  https://compile-identity-boots-britain.trycloudflare.com
-```
+- Screenshot do navegador com HTTPS ativo e confiável:
+![HTTPS](/imgs/tarefa1_image.png)
 
-Esse domínio já é entregue ao usuário com um certificado válido, emitido pela autoridade Google Trust Services, o que significa que o navegador pode estabelecer uma comunicação criptografada imediatamente, sem necessidade de configuração adicional no Nginx. Ao acessar esse domínio pelo navegador, foi exibido o cadeado de conexão segura, confirmando que o certificado era confiável e reconhecido pelo sistema.
+- Inclua uma captura de tela do certificado confiável:
+![Certificado Público](/imgs/tarefa1_image-1.png)
 
-- Screenshot da página HTTPS:
-![HTTPS](imgs/tarefa1_image.png)
-
-Com o comando de validação feito no terminal:
-```bash
-openssl s_client -connect <domínio>:443 -servername <domínio>
-```
-A saída exibe uma cadeia completa de certificação, incluindo o certificado raiz, o intermediário e o certificado apresentado pelo servidor. A presença da mensagem “Verify return code: 0 (ok)” confirma que toda a cadeia foi validada com sucesso e que a conexão HTTPS está corretamente estabelecida.
-
-- Screenshot do certificado no navegador (cadeado):
-![Cadeado](imgs/tarefa1_image-1.png)
-![Certificado Cloudflare](imgs/tarefa1_image-2.png)
-
----
 
 ## 3. Tarefa 2 – HTTPS com PKI Própria (Root + Intermediária)
 
