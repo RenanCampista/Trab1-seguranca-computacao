@@ -2,6 +2,13 @@
 
 Este trabalho consolida alguns conceitos estudados na disciplina Segurança em Computação, por meio da implementação de um serviço de certificação digital privado.
 
+## Links Úteis
+- [Relatório](relatorio_t1.md)
+
+- [Vídeo da tarefa HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando OpenSSL](https://youtu.be)
+
+- [Vídeo da tarefa HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando Python](https://youtu.be/xtD6accmXqE)
+
 
 ## Tarefa 1 – HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando OpenSSL
 TODO

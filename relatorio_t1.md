@@ -99,7 +99,7 @@ INF  https://compile-identity-boots-britain.trycloudflare.com
 Esse domínio já é entregue ao usuário com um certificado válido, emitido pela autoridade Google Trust Services, o que significa que o navegador pode estabelecer uma comunicação criptografada imediatamente, sem necessidade de configuração adicional no Nginx. Ao acessar esse domínio pelo navegador, foi exibido o cadeado de conexão segura, confirmando que o certificado era confiável e reconhecido pelo sistema.
 
 - Screenshot da página HTTPS:
-![HTTPS](image.png)
+![HTTPS](imgs/tarefa1_image.png)
 
 Com o comando de validação feito no terminal:
 ```bash
@@ -108,8 +108,8 @@ openssl s_client -connect <domínio>:443 -servername <domínio>
 A saída exibe uma cadeia completa de certificação, incluindo o certificado raiz, o intermediário e o certificado apresentado pelo servidor. A presença da mensagem “Verify return code: 0 (ok)” confirma que toda a cadeia foi validada com sucesso e que a conexão HTTPS está corretamente estabelecida.
 
 - Screenshot do certificado no navegador (cadeado):
-![Cadeado](image-1.png)
-![Certificado Cloudflare](image-2.png)
+![Cadeado](imgs/tarefa1_image-1.png)
+![Certificado Cloudflare](imgs/tarefa1_image-2.png)
 
 ---
 
@@ -153,7 +153,7 @@ Sim. Após a importação, o navegador passou a reconhecer a CA raiz como uma au
 
 - Inclua uma captura de tela do certificado confiável.
 
-![Certificado confiável](imgs/screenshot_certificado.png)
+![Certificado confiável](imgs/tarefa2_screenshot_certificado.png)
 
 ### 3.5. Validação da Cadeia
 - Resultado do comando de verificação: 
@@ -164,7 +164,7 @@ curl -v --cacert certs/root/root.cert.pem https://localhost:8443/
 
 - Screenshot do navegador com HTTPS ativo e confiável:
 
-![HTTPS ativo e confiável](imgs/screenshot_site.png)
+![HTTPS ativo e confiável](imgs/tarefa2_screenshot_site.png)
 ---
 
 ## 4. Comparação entre os Dois Cenários
@@ -185,13 +185,13 @@ Responda às questões abaixo com base na experiência prática:
 ## Checklist Final
 | Item | Status |
 |------|--------|
-| Servidor Nginx funcional (Docker) | ✅ / ❌ |
-| Certificado Let's Encrypt emitido e válido | ✅ / ❌ |
-| PKI própria criada (Root + Intermediária) | ✅ / ❌ |
-| Importação da CA raiz no navegador | ✅ / ❌ |
-| Cadeia de certificação validada com sucesso | ✅ / ❌ |
-| Relatório completo e entregue | ✅ / ❌ |
-| Apresentação prática (vídeo) | ✅ / ❌ |
+| Servidor Nginx funcional (Docker) | ✅  |
+| Certificado Let's Encrypt emitido e válido | ✅  |
+| PKI própria criada (Root + Intermediária) | ✅  |
+| Importação da CA raiz no navegador | ✅  |
+| Cadeia de certificação validada com sucesso | ✅ |
+| Relatório completo e entregue | ✅ |
+| Apresentação prática (vídeo) | ✅  |
 
 ---
 
