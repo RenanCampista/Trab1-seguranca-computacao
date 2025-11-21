@@ -5,9 +5,70 @@ Este trabalho consolida alguns conceitos estudados na disciplina Segurança em C
 ## Links Úteis
 - [Relatório](relatorio_t1.md)
 
+- [Vídeo da tarefa HTTPS com Certificado Público (Let's Encrypt + ngrok)](https://www.youtube.com/watch?v=lPXP9_PkoKg)
+
 - [Vídeo da tarefa HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando OpenSSL](https://youtu.be)
 
 - [Vídeo da tarefa HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando Python](https://youtu.be/xtD6accmXqE)
+
+
+## Tarefa 1 - HTTPS com Certificado Público (Let's Encrypt + ngrok)
+### 1. Requisitos
+- Docker e Docker Compose instalados
+- `cloudflared` instalado (binário do Cloudflare Tunnel)  
+  - Em muitas distros basta: `sudo apt install cloudflared`  
+  - Ou baixar direto da página oficial do Cloudflare.
+- `curl` (para testes via terminal)
+
+### 2. Subindo o Nginx em HTTP (para validação)
+1. Entre na pasta da tarefa:
+   ```bash
+   cd tarefa1-letsencrypt
+   ```
+
+2. Suba o Nginx em background:
+    ```bash
+    docker-compose up -d --build
+    ```
+
+3. Teste o HTTP local:
+    ```bash
+    curl http://localhost:8081/
+    ```
+
+### 3. Criando o túnel público
+1. Abra outro terminal e execute:
+    ```bash
+    cloudflared tunnel --url http://localhost:8081 --protocol http2
+    ```
+
+2. O cloudflared abrirá um túnel e exibirá um domínio do tipo:
+    ```bash
+    chttps://algum-nome-aleatorio.trycloudflare.com
+    ```
+
+### 4. Emitindo o certificado com o Certbot (Let’s Encrypt)
+1. Execute o Certbot em modo webroot usando Docker:
+    ```bash
+    docker-compose run --rm certbot certonly \
+      --webroot -w /var/www/certbot \
+      -d DOMÍNIO-GERADO
+    ```
+
+2. O Certbot pedirá um e-mail e confirmação dos termos da Let’s Encrypt.
+Depois de alguns segundos, a saída deve indicar sucesso e informar:
+- caminho do fullchain.pem
+- caminho do privkey.pem
+
+3. Esses caminhos estão dentro do container, mas mapeados para o host em
+certbot/conf/live/.... Para facilitar a configuração do Nginx, copie os arquivos para nomes genéricos:
+    ```bash
+    cp certbot/conf/live/DOMINIO-GERADO/fullchain.pem certbot/conf/live/fullchain.pem
+    cp certbot/conf/live/DOMINIO-GERADO/privkey.pem   certbot/conf/live/privkey.pem
+    ```
+
+### 5. Testar no navegador
+1. Abrir https://DOMINIO-GERADO no navegador → ver página da tarefa com cadeado Let’s Encrypt.
 
 
 ## Tarefa 1 - HTTPS com Certificado Válido via CA Privada (Root + Intermediária) usando OpenSSL e Docker
